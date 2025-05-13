@@ -1,0 +1,45 @@
+data:
+  raw_data_path: "data/raw"
+  processed_data_path: "data/processed"
+  test_size: 0.2
+  random_state: 42
+
+model:
+  target: "satisfaction"
+  features_to_drop:
+    - "id"
+    - "Unnamed: 0"
+  categorical_features:
+    - "Gender"
+    - "Customer Type"
+    - "Type of Travel"
+    - "Class"
+  numerical_features:
+    - "Age"
+    - "Flight Distance"
+    - "Departure Delay in Minutes"
+    - "Arrival Delay in Minutes"
+  rating_features:
+    - "Inflight wifi service"
+    - "Departure/Arrival time convenient"
+    - "Ease of Online booking"
+    - "Gate location"
+    - "Food and drink"
+    - "Online boarding"
+    - "Seat comfort"
+    - "Inflight entertainment"
+    - "On-board service"
+    - "Leg room service"
+    - "Baggage handling"
+    - "Checkin service"
+    - "Inflight service"
+    - "Cleanliness"
+
+mlflow:
+  tracking_uri: "mlruns"
+  experiment_name: "airline_satisfaction"
+
+api:
+  host: "0.0.0.0"
+  port: 8000
+  model_path: "models/model.pkl" 
