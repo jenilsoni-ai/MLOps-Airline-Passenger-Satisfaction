@@ -8,7 +8,6 @@ model:
   target: "satisfaction"
   features_to_drop:
     - "id"
-    - "Unnamed: 0"
   categorical_features:
     - "Gender"
     - "Customer Type"
