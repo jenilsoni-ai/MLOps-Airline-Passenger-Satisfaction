@@ -1,4 +1,4 @@
-name: CI/CD Pipeline
+name: MLOps CI/CD Pipeline
 
 on:
   push:
@@ -9,49 +9,78 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v2
-    
-    - name: Set up Python
-      uses: actions/setup-python@v2
-      with:
-        python-version: '3.8'
-    
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-    
-    - name: Run tests
-      run: |
-        pytest tests/
-    
-    - name: Run linting
-      run: |
-        flake8 src/ tests/
-        black --check src/ tests/
+    strategy:
+      matrix:
+        python-version: [3.8, 3.9]
 
-  deploy:
-    needs: test
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        lfs: true
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e ".[dev]"
+    
+    - name: Run tests with pytest
+      run: |
+        pytest -v --cov=src --cov-report=xml
+    
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v2
+      with:
+        file: ./coverage.xml
+        fail_ci_if_error: true
+
+  lint:
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
     steps:
     - uses: actions/checkout@v2
     
     - name: Set up Python
       uses: actions/setup-python@v2
       with:
-        python-version: '3.8'
+        python-version: 3.8
     
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -r requirements.txt
+        pip install black flake8
     
-    - name: Process data
-      run: |
-        python src/data/make_dataset.py
+    - name: Run black
+      run: black . --check
     
-    - name: Train model
-      run: |
-        python src/models/train_model.py 
+    - name: Run flake8
+      run: flake8 .
+
+  build-and-push:
+    needs: [test, lint]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+    - uses: actions/checkout@v2
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v1
+    
+    - name: Login to DockerHub
+      uses: docker/login-action@v1
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+    
+    - name: Build and push
+      uses: docker/build-push-action@v2
+      with:
+        context: .
+        push: true
+        tags: |
+          ${{ secrets.DOCKER_USERNAME }}/airline-satisfaction:latest
+          ${{ secrets.DOCKER_USERNAME }}/airline-satisfaction:${{ github.sha }} 
